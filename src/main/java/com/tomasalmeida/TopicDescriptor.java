@@ -8,14 +8,17 @@ import static org.apache.kafka.common.utils.Bytes.BYTES_LEXICO_COMPARATOR;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.List;
-import java.util.Properties;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
 
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.Config;
+import org.apache.kafka.clients.admin.KafkaAdminClient;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.KafkaFuture;
+import org.apache.kafka.common.config.ConfigResource;
 
 public class TopicDescriptor {
 
@@ -27,12 +30,26 @@ public class TopicDescriptor {
         topicDescriptor.run(args);
     }
 
-    private void run(final String[] args) throws IOException {
+    private void run(final String[] args) throws Exception {
         final Properties properties = buildProperties(args[0]);
 
         consumeAllMessages(properties, args[1]);
-        printMessage("Total number of records: %d", totalRecords);
-        printMessage("Total number of distinct keys: %d", keys.size());
+        printTopicConfigs(properties, args[1]);
+    }
+
+    private void printTopicConfigs(Properties properties, String topic) throws ExecutionException, InterruptedException {
+        final AdminClient admin = KafkaAdminClient.create(properties);
+        printMessage("Config of the topic [%s]", topic);
+        ConfigResource configResource = new ConfigResource(ConfigResource.Type.TOPIC, topic);
+
+        Config configs = admin
+                .describeConfigs(List.of(configResource))
+                .values()
+                .get(configResource)
+                .get();
+
+        configs.entries()
+                .forEach(entry -> printMessage("Config [%s] = [%s]", entry.name(), entry.value()));
     }
 
     private void consumeAllMessages(final Properties properties, final String topic) {
@@ -48,10 +65,14 @@ public class TopicDescriptor {
                     totalRecords++;
                     keys.add(record.key());
                 }
+                System.out.print('.');
             }
         } finally {
             consumer.close();
         }
+        System.out.println("");
+        printMessage("Total number of records: %d", totalRecords);
+        printMessage("Total number of distinct keys: %d", keys.size());
     }
 
     private void printMessage(final String format, final Object... args) {
