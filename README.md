@@ -9,7 +9,5 @@ Quick and dirty Kafka topic descriptor to get some information about the topic. 
   java -jar topic-descriptor-x.y.z.jar <config file> <topic name>
 ```
 
-
 ## DISCLAIMER
 THIS CONFIGURATION IS CREATED FOR TESTING ONLY, USE ON PRODUCTION AT YOUR OWN RISK. PLEASE CHECK THE [LICENSE](LICENSE) FOR FURTHER INFORMATION.
-
